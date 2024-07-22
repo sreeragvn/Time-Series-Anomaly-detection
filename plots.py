@@ -2,9 +2,12 @@ import pandas as pd
 import numpy as np 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+import matplotlib.pyplot as plt
 import warnings # Suppress warnings 
 warnings.filterwarnings('ignore')
+import scipy.stats as stats
+import plotly.graph_objects as go
+import plotly.subplots as sp
 
 np.random.seed(7)
 
@@ -85,6 +88,55 @@ def daily_average_plot_split_month(data):
     fig.update_xaxes(title_text='Date', tickangle=45, title_font=dict(size=14, family='Arial, sans-serif'))
 
     fig.show()
+
+def decomposition_plot(decomposition):
+    observed = decomposition.observed
+    trend = decomposition.trend
+    seasonal = decomposition.seasonal
+    resid = decomposition.resid
+
+    # Group by month
+    observed_monthly = observed.groupby(observed.index.month)
+    trend_monthly = trend.groupby(trend.index.month)
+    seasonal_monthly = seasonal.groupby(seasonal.index.month)
+    resid_monthly = resid.groupby(resid.index.month)
+
+    # Find the global min and max for each component
+    observed_min, observed_max = observed.min(), observed.max()
+    trend_min, trend_max = trend.min(), trend.max()
+    seasonal_min, seasonal_max = seasonal.min() - 1, seasonal.max() + 1
+    resid_min, resid_max = resid.min(), resid.max()
+
+    # Plotting
+    for month in observed_monthly.groups.keys():
+        plt.figure(figsize=(15, 12))
+        
+        # Observed component
+        plt.subplot(4, 1, 1)
+        plt.plot(observed_monthly.get_group(month))
+        plt.ylim(observed_min, observed_max)
+        plt.title(f'Observed Component for Month {month}')
+        
+        # Trend component
+        plt.subplot(4, 1, 2)
+        plt.plot(trend_monthly.get_group(month))
+        plt.ylim(trend_min, trend_max)
+        plt.title(f'Trend Component for Month {month}')
+        
+        # Seasonal component
+        plt.subplot(4, 1, 3)
+        plt.plot(seasonal_monthly.get_group(month))
+        plt.ylim(seasonal_min, seasonal_max)
+        plt.title(f'Seasonal Component for Month {month}')
+        
+        # Residual component
+        plt.subplot(4, 1, 4)
+        plt.plot(resid_monthly.get_group(month))
+        plt.ylim(resid_min, resid_max)
+        plt.title(f'Residual Component for Month {month}')
+        
+        plt.tight_layout()
+        plt.show()
 
 def day15_split_time_series_plot(data):
     data['value'] = data['datetime'].apply(lambda x: 1 if x.day <= 15 else 2)
@@ -175,85 +227,137 @@ def monthly_average_plot(data):
 def monthly_split_time_series_plot(data):
     data = prepare_data(data)
     months = data['year_month'].unique()
+    # months = data.index.to_period('M').unique()
+    plots = []
 
-    fig = make_subplots(
-        rows=len(months), cols=2, 
-        subplot_titles=[f'{m} - Data 0' for m in months] + [f'{m} - Data 1' for m in months],
-        # vertical_spacing=0.05, 
-        horizontal_spacing=0.02
-    )
-
-    for i, month in enumerate(months):
+    for month in months:
         monthly_data = data[data['year_month'] == month]
-        y_min = min(monthly_data['data_0'].min(), monthly_data['data_1'].min()) - 0.5
-        y_max = max(monthly_data['data_0'].max(), monthly_data['data_1'].max()) + 0.5
 
-        fig.add_trace(
-            go.Scatter(x=monthly_data['datetime'], y=monthly_data['data_0'], mode='lines+markers', name='Data 0',
-                       marker=dict(symbol='circle', color='blue')),
-            row=i+1, col=1
-        )
-        fig.add_trace(
-            go.Scatter(x=monthly_data['datetime'], y=monthly_data['data_1'], mode='lines+markers', name='Data 1',
-                       marker=dict(symbol='square', color='orange'), line=dict(dash='dash')),
-            row=i+1, col=2
-        )
+        fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                            subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+                            vertical_spacing=0.03, horizontal_spacing=0.02)
 
-        fig.update_yaxes(title_text="Value", range=[y_min, y_max], title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=1)
-        fig.update_yaxes(title_text="Value", range=[y_min, y_max], title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=2)
-        fig.update_xaxes(title_text='Datetime', tickangle=45, title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=1)
-        fig.update_xaxes(title_text='Datetime', tickangle=45, title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=2)
+        fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_0'], name='data_0', mode='lines'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_1'], name='data_1', mode='lines'), row=2, col=1)
 
-    fig.update_layout(
-        # height=300 * len(months),
-        # width=1200,
-        title_text="Comparison of Data 0 and Data 1 Over Time",
-        title_x=0.5,
-        title_font=dict(size=20, family='Arial, sans-serif'),
-        showlegend=False,
-        template='plotly_white'
-    )
+        # # Anomalies for data_0
+        # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly']].index
+        # fig.add_trace(go.Scatter(x=anomaly_indices_0, y=monthly_data.loc[anomaly_indices_0, 'data_0'], 
+        #                         mode='markers', name='Anomaly data_0', 
+        #                         marker=dict(color='red', size=10)), row=1, col=1)
+        
+        # # Anomalies for data_1
+        # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly']].index
+        # fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
+        #                         mode='markers', name='Anomaly data_1', 
+        #                         marker=dict(color='blue', size=10)), row=2, col=1)
 
-    fig.show()
+        fig.update_layout(title_text=f"Data for {month}")
+        plots.append(fig)
+
+    # Display the plots
+    for plot in plots:
+        plot.show()
+
+    # data = prepare_data(data)
+    # months = data['year_month'].unique()
+
+    # fig = make_subplots(
+    #     rows=len(months), cols=2, 
+    #     subplot_titles=[f'{m} - Data 0' for m in months] + [f'{m} - Data 1' for m in months],
+    #     # vertical_spacing=0.05, 
+    #     horizontal_spacing=0.02
+    # )
+
+    # for i, month in enumerate(months):
+    #     monthly_data = data[data['year_month'] == month]
+    #     y_min = min(monthly_data['data_0'].min(), monthly_data['data_1'].min()) - 0.5
+    #     y_max = max(monthly_data['data_0'].max(), monthly_data['data_1'].max()) + 0.5
+
+    #     fig.add_trace(
+    #         go.Scatter(x=monthly_data['datetime'], y=monthly_data['data_0'], mode='lines+markers', name='Data 0',
+    #                    marker=dict(symbol='circle', color='blue')),
+    #         row=i+1, col=1
+    #     )
+    #     fig.add_trace(
+    #         go.Scatter(x=monthly_data['datetime'], y=monthly_data['data_1'], mode='lines+markers', name='Data 1',
+    #                    marker=dict(symbol='square', color='orange'), line=dict(dash='dash')),
+    #         row=i+1, col=2
+    #     )
+
+    #     fig.update_yaxes(title_text="Value", range=[y_min, y_max], title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=1)
+    #     fig.update_yaxes(title_text="Value", range=[y_min, y_max], title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=2)
+    #     fig.update_xaxes(title_text='Datetime', tickangle=45, title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=1)
+    #     fig.update_xaxes(title_text='Datetime', tickangle=45, title_font=dict(size=14, family='Arial, sans-serif'), row=i+1, col=2)
+
+    # fig.update_layout(
+    #     # height=300 * len(months),
+    #     # width=1200,
+    #     title_text="Comparison of Data 0 and Data 1 Over Time",
+    #     title_x=0.5,
+    #     title_font=dict(size=20, family='Arial, sans-serif'),
+    #     showlegend=False,
+    #     template='plotly_white'
+    # )
+
+    # fig.show()
 
 def data_distribution_plot(data):
-    fig = make_subplots(
-        rows=1, cols=2, 
-        subplot_titles=('Distribution of Data 0', 'Distribution of Data 1'),
-        vertical_spacing=0.02, horizontal_spacing=0.02
-    )
+    fig, axs = plt.subplots(1, 2, figsize=(12, 4))
 
-    fig.add_trace(go.Histogram(
-        x=data['data_0'],
-        nbinsx=20,
-        name='Data 0',
-        marker_color='blue',
-        opacity=0.7
-    ), row=1, col=1)
-    fig.add_trace(go.Histogram(
-        x=data['data_1'],
-        nbinsx=20,
-        name='Data 1',
-        marker_color='orange',
-        opacity=0.7
-    ), row=1, col=2)
+    # Histogram for data_0
+    axs[0].hist(data['data_0'], bins=100, color='skyblue', edgecolor='black')
+    axs[0].set_title('Histogram of data_0')
+    axs[0].set_xlabel('data_0')
+    axs[0].set_ylabel('Frequency')
 
-    fig.update_layout(
-        title_text='Comparison of Data 0 and Data 1 Distribution',
-        title_x=0.5,
-        title_font=dict(size=20, family='Arial, sans-serif'),
-        template='plotly_white',
-        font=dict(size=14),
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-        margin=dict(t=80, b=40)
-    )
+    # Histogram for data_1
+    axs[1].hist(data['data_1'], bins=100, color='salmon', edgecolor='black')
+    axs[1].set_title('Histogram of data_1')
+    axs[1].set_xlabel('data_1')
+    axs[1].set_ylabel('Frequency')
 
-    fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
-    fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
-    fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
-    fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
+    # Adjust layout
+    plt.tight_layout()
+    plt.show()
 
-    fig.show()
+    # fig = make_subplots(
+    #     rows=1, cols=2, 
+    #     subplot_titles=('Distribution of Data 0', 'Distribution of Data 1'),
+    #     vertical_spacing=0.02, horizontal_spacing=0.02
+    # )
+
+    # fig.add_trace(go.Histogram(
+    #     x=data['data_0'],
+    #     nbinsx=100,
+    #     name='Data 0',
+    #     marker_color='blue',
+    #     opacity=0.7
+    # ), row=1, col=1)
+    # fig.add_trace(go.Histogram(
+    #     x=data['data_1'],
+    #     nbinsx=100,
+    #     name='Data 1',
+    #     marker_color='orange',
+    #     opacity=0.7
+    # ), row=1, col=2)
+
+    # fig.update_layout(
+    #     title_text='Comparison of Data 0 and Data 1 Distribution',
+    #     title_x=0.5,
+    #     title_font=dict(size=20, family='Arial, sans-serif'),
+    #     template='plotly_white',
+    #     font=dict(size=14),
+    #     legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+    #     margin=dict(t=80, b=40)
+    # )
+
+    # fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
+    # fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
+    # fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
+    # fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
+
+    # fig.show()
 
 def raw_data_time_series_plot(data):
     y_min = min(data['data_0'].min(), data['data_1'].min()) - 0.5
@@ -320,8 +424,8 @@ def monthly_raw_time_series_plot(data):
             fig.add_trace(go.Scatter(x=day_data['time'], y=day_data['data_1'], mode='lines+markers', name=f'Day {day}', line=dict(color=colors[day % len(colors)])), row=1, col=2)
 
         fig.update_layout(
-            height=600,
-            width=1400,
+            height=300,
+            width=1000,
             title_text=f"Comparison of Data 0 and Data 1 Over Time for {month}",
             title_x=0.5,
             title_font=dict(size=24, family='Arial, sans-serif'),
@@ -480,3 +584,42 @@ def daily_average_plot(data):
     )
 
     fig.show()
+
+
+def check_if_data_is_normal_dist(data):
+
+    def test_normality(data):
+        k2, p_value = stats.normaltest(data)
+        return p_value
+
+    # Aggregating data by time
+    grouped = data.groupby('time').agg(list)
+
+    # Performing normality test for each time instance
+    # normality_results = grouped.applymap(test_normality)
+    normality_results = grouped.map(lambda x: test_normality(x))
+
+
+    # Visualizing the distribution of p-values
+    # Plotting the distribution of p-values for each sensor
+    fig, axs = plt.subplots(1, 2, figsize=(12, 3))
+
+    # Sensor 0
+    axs[0].hist(normality_results['data_0'], bins=30, alpha=0.7, label='Sensor 0', color='blue')
+    axs[0].axvline(x=0.05, color='r', linestyle='--', label='p = 0.05')
+    axs[0].set_xlabel('p-value')
+    axs[0].set_ylabel('Frequency')
+    axs[0].set_title('Sensor 0 Data at Each Time Instance')
+    axs[0].legend()
+
+    # Sensor 1
+    axs[1].hist(normality_results['data_1'], bins=30, alpha=0.7, label='Sensor 1', color='orange')
+    axs[1].axvline(x=0.05, color='r', linestyle='--', label='p = 0.05')
+    axs[1].set_xlabel('p-value')
+    axs[1].set_ylabel('Frequency')
+    axs[1].set_title('Sensor 1 Data at Each Time Instance')
+    axs[1].legend()
+
+    fig.suptitle('Distribution of p-values for Normality Test')
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
