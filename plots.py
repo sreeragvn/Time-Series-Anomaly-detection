@@ -224,30 +224,36 @@ def monthly_average_plot(data):
 
     fig.show()
 
-def monthly_split_time_series_plot(data):
-    data = prepare_data(data)
-    months = data['year_month'].unique()
-    # months = data.index.to_period('M').unique()
+def monthly_split_time_series_plot(data, diff = False):
+    months = data.index.to_period('M').unique()
     plots = []
 
     for month in months:
-        monthly_data = data[data['year_month'] == month]
+        monthly_data = data[data.index.to_period('M') == month]
 
-        fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, 
-                            subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
-                            vertical_spacing=0.03, horizontal_spacing=0.02)
+        if diff == False:
+            fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+                                vertical_spacing=0.03, horizontal_spacing=0.02)
+        else:
+            fig = sp.make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                                subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+                                vertical_spacing=0.03, horizontal_spacing=0.02)
+
 
         fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_0'], name='data_0', mode='lines'), row=1, col=1)
         fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_1'], name='data_1', mode='lines'), row=2, col=1)
+        if diff == True:
+            fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['diff'], name='diff', mode='lines'), row=3, col=1)
 
         # # Anomalies for data_0
-        # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly']].index
+        # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly_0']].index
         # fig.add_trace(go.Scatter(x=anomaly_indices_0, y=monthly_data.loc[anomaly_indices_0, 'data_0'], 
         #                         mode='markers', name='Anomaly data_0', 
         #                         marker=dict(color='red', size=10)), row=1, col=1)
         
         # # Anomalies for data_1
-        # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly']].index
+        # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly_1']].index
         # fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
         #                         mode='markers', name='Anomaly data_1', 
         #                         marker=dict(color='blue', size=10)), row=2, col=1)
@@ -258,6 +264,39 @@ def monthly_split_time_series_plot(data):
     # Display the plots
     for plot in plots:
         plot.show()
+    # data = prepare_data(data)
+    # months = data['year_month'].unique()
+    # # months = data.index.to_period('M').unique()
+    # plots = []
+
+    # for month in months:
+    #     monthly_data = data[data['year_month'] == month]
+
+    #     fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, 
+    #                         subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+    #                         vertical_spacing=0.03, horizontal_spacing=0.02)
+
+    #     fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_0'], name='data_0', mode='lines'), row=1, col=1)
+    #     fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_1'], name='data_1', mode='lines'), row=2, col=1)
+
+    #     # # Anomalies for data_0
+    #     # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly']].index
+    #     # fig.add_trace(go.Scatter(x=anomaly_indices_0, y=monthly_data.loc[anomaly_indices_0, 'data_0'], 
+    #     #                         mode='markers', name='Anomaly data_0', 
+    #     #                         marker=dict(color='red', size=10)), row=1, col=1)
+        
+    #     # # Anomalies for data_1
+    #     # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly']].index
+    #     # fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
+    #     #                         mode='markers', name='Anomaly data_1', 
+    #     #                         marker=dict(color='blue', size=10)), row=2, col=1)
+
+    #     fig.update_layout(title_text=f"Data for {month}")
+    #     plots.append(fig)
+
+    # # Display the plots
+    # for plot in plots:
+    #     plot.show()
 
     # data = prepare_data(data)
     # months = data['year_month'].unique()
@@ -398,6 +437,7 @@ def raw_data_time_series_plot(data):
     fig.show()
 
 def monthly_raw_time_series_plot(data):
+    data = data.reset_index()
     data['time'] = data['datetime'].dt.strftime('%H:%M')
     data['month'] = data['datetime'].dt.to_period('M')
     data['day'] = data['datetime'].dt.day
@@ -458,99 +498,8 @@ def monthly_raw_time_series_plot(data):
         )
 
         fig.show()
-# def monthly_raw_time_series_plot(data):
-#     data['time'] = data['datetime'].dt.strftime('%H:%M')
-#     data['month'] = data['datetime'].dt.to_period('M')
-#     data['day'] = data['datetime'].dt.day
-#     months = data['month'].unique()
-
-#     subplot_titles = sorted([f"{month} - Data 0" for month in months] + [f"{month} - Data 1" for month in months])
-#     # subplot_titles.sort(key=lambda x: x.split('- Data ')[-1])
-#     # subplot_titles.sort(key=lambda x: x.split(' - ')[0])
-
-#     fig = make_subplots(
-#         rows=len(months), cols=2, shared_xaxes=True, 
-#         subplot_titles=subplot_titles,
-#         vertical_spacing=0.02, horizontal_spacing=0.02
-#     )
-
-#     colors = go.Figure().layout.template.layout.colorway
-#     hourly_ticks = [f'{hour:02}:00' for hour in range(25)]
-
-#     for i, month in enumerate(months):
-#         month_data = data[data['month'] == month]
-#         y_min = min(month_data['data_0'].min(), month_data['data_1'].min()) - 5
-#         y_max = max(month_data['data_0'].max(), month_data['data_1'].max()) + 2
-#         days = month_data['day'].unique()
-        
-#         for day in days:
-#             day_data = month_data[month_data['day'] == day]
-#             fig.add_trace(go.Scatter(x=day_data['time'], y=day_data['data_0'], mode='lines+markers', name=f'Day {day}', line=dict(color=colors[day % len(colors)])), row=i+1, col=1)
-#             fig.add_trace(go.Scatter(x=day_data['time'], y=day_data['data_1'], mode='lines+markers', name=f'Day {day}', line=dict(color=colors[day % len(colors)])), row=i+1, col=2)
-
-#     fig.update_layout(
-#         height=300 * len(months),
-#         width=1400,
-#         title_text="Comparison of Data 0 and Data 1 Over Time by Month and Day",
-#         title_x=0.5,
-#         title_font=dict(size=24, family='Arial, sans-serif'),
-#         template='plotly_white',
-#         showlegend=False,
-#         margin=dict(l=40, r=40, t=60, b=40)
-#     )
-
-#     for i in range(len(months)):
-#         if i == len(months) - 1:
-#             fig.update_xaxes(
-#                 tickmode='array', 
-#                 tickvals=hourly_ticks, 
-#                 ticktext=hourly_ticks, 
-#                 row=i+1, col=1,
-#                 title_text='Time of Day',
-#                 title_font=dict(size=14, family='Arial, sans-serif'),
-#                 tickfont=dict(size=12, family='Arial, sans-serif')
-#             )
-#             fig.update_xaxes(
-#                 tickmode='array', 
-#                 tickvals=hourly_ticks, 
-#                 ticktext=hourly_ticks, 
-#                 row=i+1, col=2,
-#                 title_text='Time of Day',
-#                 title_font=dict(size=14, family='Arial, sans-serif'),
-#                 tickfont=dict(size=12, family='Arial, sans-serif')
-#             )
-#         else:
-#             fig.update_xaxes(
-#                 tickmode='array', 
-#                 tickvals=hourly_ticks, 
-#                 ticktext=hourly_ticks, 
-#                 row=i+1, col=1,
-#                 showticklabels=False
-#             )
-#             fig.update_xaxes(
-#                 tickmode='array', 
-#                 tickvals=hourly_ticks, 
-#                 ticktext=hourly_ticks, 
-#                 row=i+1, col=2,
-#                 showticklabels=False
-#             )
-#         fig.update_yaxes(
-#             range=[y_min, y_max],
-#             title_text='Data 0 Value',
-#             title_font=dict(size=14, family='Arial, sans-serif'),
-#             tickfont=dict(size=12, family='Arial, sans-serif'),
-#             row=i+1, col=1
-#         )
-#         fig.update_yaxes(
-#             range=[y_min, y_max],
-#             title_text='Data 1 Value',
-#             title_font=dict(size=14, family='Arial, sans-serif'),
-#             tickfont=dict(size=12, family='Arial, sans-serif'),
-#             row=i+1, col=2
-#         )
-
-#     fig.show()
-
+    data.set_index("datetime")
+    
 def daily_average_plot(data):
     data = prepare_data(data)
     daily_averages = data.groupby(['year_month', 'date', 'day']).mean().reset_index()
