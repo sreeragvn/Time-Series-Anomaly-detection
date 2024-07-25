@@ -450,7 +450,7 @@ def monthly_raw_time_series_plot(data):
         fig = make_subplots(
             rows=1, cols=2, shared_xaxes=True,
             subplot_titles=[f"{month} - Data 0", f"{month} - Data 1"],
-            vertical_spacing=0.02, horizontal_spacing=0.02
+            vertical_spacing=0.02, horizontal_spacing=0.03
         )
 
         month_data = data[data['month'] == month]

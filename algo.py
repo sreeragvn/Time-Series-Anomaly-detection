@@ -10,13 +10,13 @@ import torch.nn as nn
 import torch.optim as optim
 import json
 
-TIME_STEPS = 20
+TIME_STEPS = 30
 BATCH_SIZE = 512
 EPOCHS = 100
 LEARNING_RATE = 0.01
 LATENT_DIM = 4
 EARLY_STOPPING_PATIENCE = 20
-HYPER_PARAMETER_TUNE = True
+HYPER_PARAMETER_TUNE = False
 # Check for GPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 criterion = nn.MSELoss()
@@ -124,9 +124,8 @@ def train_model(model, train_loader, criterion, optimizer, epochs, patience):
 
     return best_loss
 
-
 def objective(trial, train_loader):
-    latent_dim = trial.suggest_int('latent_dim', 2, 5)
+    latent_dim = trial.suggest_int('latent_dim', 2, 6)
     learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
     
     model = DenseAutoencoderModel(input_shape=TIME_STEPS, latent_dim=latent_dim).to(device)
@@ -147,12 +146,13 @@ def run_optuna(train_loader):
 def preprocess_and_train(train, column_name):
     train_col = pd.DataFrame(train, columns=[column_name])
 
-    TIME_STEPS = 20
+    TIME_STEPS = 30
     BATCH_SIZE = 512
     EPOCHS = 100
     EARLY_STOPPING_PATIENCE = 20
 
-    X_train = split_train_test_sequence(train_col, TIME_STEPS)
+    # split_train_test_sequence
+    X_train = create_dataset(train_col, TIME_STEPS)
 
     min_val = X_train.min()
     max_val = X_train.max()  # Use train max for consistency
