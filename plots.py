@@ -23,7 +23,7 @@ def box_plot(data):
     fig.add_trace(go.Box(
         y=data['data_1'],
         name='data_1',
-        marker_color='orange',
+        marker_color='red',
         opacity=0.7
     ))
 
@@ -47,8 +47,11 @@ def prepare_data(data):
     data['year_month'] = data['datetime'].dt.to_period('M')
     return data
 
-def daily_average_plot_split_month(data):
+def daily_average_plot_split_month(df):
+    data = df.copy()
+    data = data.reset_index()
     data = prepare_data(data)
+    data = data.set_index("datetime")
     daily_averages = data.groupby(['year_month', 'date', 'day']).mean().reset_index()
 
     fig = go.Figure()
@@ -57,7 +60,7 @@ def daily_average_plot_split_month(data):
     y_max = max(daily_averages['data_0'].max(), daily_averages['data_1'].max()) + 0.5
 
     color_data_0 = 'blue'
-    color_data_1 = 'orange'
+    color_data_1 = 'red'
 
     for month in daily_averages['year_month'].dt.strftime('%Y-%m').unique():
         monthly_data = daily_averages[daily_averages['year_month'].dt.strftime('%Y-%m') == month]
@@ -77,7 +80,7 @@ def daily_average_plot_split_month(data):
         ))
 
     fig.update_layout(
-        title_text='Comparison of Monthly Average Data 0 and Data 1 Over Time',
+        title_text='Comparison of Daily Average Data 0 and Data 1 Over Time',
         title_x=0.5,
         height=500,
         width=1000,
@@ -224,7 +227,11 @@ def monthly_average_plot(data):
 
     fig.show()
 
-def monthly_split_time_series_plot(data, diff = False):
+def monthly_split_time_series_plot(data, diff=False):
+    data = data.copy()
+    data = data.reset_index()
+    data['datetime'] = pd.to_datetime(data['datetime'])
+    data.set_index('datetime', inplace=True)
     months = data.index.to_period('M').unique()
     plots = []
 
@@ -246,17 +253,15 @@ def monthly_split_time_series_plot(data, diff = False):
         if diff == True:
             fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['diff'], name='diff', mode='lines'), row=3, col=1)
 
-        # # Anomalies for data_0
-        # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly_0']].index
-        # fig.add_trace(go.Scatter(x=anomaly_indices_0, y=monthly_data.loc[anomaly_indices_0, 'data_0'], 
-        #                         mode='markers', name='Anomaly data_0', 
-        #                         marker=dict(color='red', size=10)), row=1, col=1)
-        
-        # # Anomalies for data_1
-        # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly_1']].index
-        # fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
-        #                         mode='markers', name='Anomaly data_1', 
-        #                         marker=dict(color='blue', size=10)), row=2, col=1)
+        # # Add vertical lines for anomalies in data_0
+        # anomaly_indices_0 = monthly_data[monthly_data['data_0_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_0:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(255, 0, 0, 0.5)', width=1, dash='dot'), row=1, col=1)
+
+        # # Add vertical lines for anomalies in data_1
+        # anomaly_indices_1 = monthly_data[monthly_data['data_1_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_1:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(0, 0, 255, 0.5)', width=1, dash='dot'), row=2, col=1)
 
         fig.update_layout(title_text=f"Data for {month}")
         plots.append(fig)
@@ -264,6 +269,48 @@ def monthly_split_time_series_plot(data, diff = False):
     # Display the plots
     for plot in plots:
         plot.show()
+
+
+# def monthly_split_time_series_plot(data, diff = False):
+#     months = data.index.to_period('M').unique()
+#     plots = []
+
+#     for month in months:
+#         monthly_data = data[data.index.to_period('M') == month]
+
+#         if diff == False:
+#             fig = sp.make_subplots(rows=2, cols=1, shared_xaxes=True, 
+#                                 subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+#                                 vertical_spacing=0.03, horizontal_spacing=0.02)
+#         else:
+#             fig = sp.make_subplots(rows=3, cols=1, shared_xaxes=True, 
+#                                 subplot_titles=(f'data_0 for {month}', f'data_1 for {month}'),
+#                                 vertical_spacing=0.03, horizontal_spacing=0.02)
+
+
+#         fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_0'], name='data_0', mode='lines'), row=1, col=1)
+#         fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['data_1'], name='data_1', mode='lines'), row=2, col=1)
+#         if diff == True:
+#             fig.add_trace(go.Scatter(x=monthly_data.index, y=monthly_data['diff'], name='diff', mode='lines'), row=3, col=1)
+
+#         # # Anomalies for data_0
+#         # anomaly_indices_0 = monthly_data[monthly_data['is_anomaly_0']].index
+#         # fig.add_trace(go.Scatter(x=anomaly_indices_0, y=monthly_data.loc[anomaly_indices_0, 'data_0'], 
+#         #                         mode='markers', name='Anomaly data_0', 
+#         #                         marker=dict(color='red', size=10)), row=1, col=1)
+        
+#         # # Anomalies for data_1
+#         # anomaly_indices_1 = monthly_data[monthly_data['is_anomaly_1']].index
+#         # fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
+#         #                         mode='markers', name='Anomaly data_1', 
+#         #                         marker=dict(color='blue', size=10)), row=2, col=1)
+
+#         fig.update_layout(title_text=f"Data for {month}")
+#         plots.append(fig)
+
+#     # Display the plots
+#     for plot in plots:
+#         plot.show()
     # data = prepare_data(data)
     # months = data['year_month'].unique()
     # # months = data.index.to_period('M').unique()
@@ -342,61 +389,61 @@ def monthly_split_time_series_plot(data, diff = False):
     # fig.show()
 
 def data_distribution_plot(data):
-    fig, axs = plt.subplots(1, 2, figsize=(12, 4))
+    # fig, axs = plt.subplots(1, 2, figsize=(12, 4))
 
-    # Histogram for data_0
-    axs[0].hist(data['data_0'], bins=100, color='skyblue', edgecolor='black')
-    axs[0].set_title('Histogram of data_0')
-    axs[0].set_xlabel('data_0')
-    axs[0].set_ylabel('Frequency')
+    # # Histogram for data_0
+    # axs[0].hist(data['data_0'], bins=100, color='skyblue', edgecolor='black')
+    # axs[0].set_title('Histogram of data_0')
+    # axs[0].set_xlabel('data_0')
+    # axs[0].set_ylabel('Frequency')
 
-    # Histogram for data_1
-    axs[1].hist(data['data_1'], bins=100, color='salmon', edgecolor='black')
-    axs[1].set_title('Histogram of data_1')
-    axs[1].set_xlabel('data_1')
-    axs[1].set_ylabel('Frequency')
+    # # Histogram for data_1
+    # axs[1].hist(data['data_1'], bins=100, color='salmon', edgecolor='black')
+    # axs[1].set_title('Histogram of data_1')
+    # axs[1].set_xlabel('data_1')
+    # axs[1].set_ylabel('Frequency')
 
-    # Adjust layout
-    plt.tight_layout()
-    plt.show()
+    # # Adjust layout
+    # plt.tight_layout()
+    # plt.show()
 
-    # fig = make_subplots(
-    #     rows=1, cols=2, 
-    #     subplot_titles=('Distribution of Data 0', 'Distribution of Data 1'),
-    #     vertical_spacing=0.02, horizontal_spacing=0.02
-    # )
+    fig = make_subplots(
+        rows=1, cols=2, 
+        subplot_titles=('Distribution of Data 0', 'Distribution of Data 1'),
+        vertical_spacing=0.02, horizontal_spacing=0.02
+    )
 
-    # fig.add_trace(go.Histogram(
-    #     x=data['data_0'],
-    #     nbinsx=100,
-    #     name='Data 0',
-    #     marker_color='blue',
-    #     opacity=0.7
-    # ), row=1, col=1)
-    # fig.add_trace(go.Histogram(
-    #     x=data['data_1'],
-    #     nbinsx=100,
-    #     name='Data 1',
-    #     marker_color='orange',
-    #     opacity=0.7
-    # ), row=1, col=2)
+    fig.add_trace(go.Histogram(
+        x=data['data_0'],
+        nbinsx=300,
+        name='Data 0',
+        marker_color='blue',
+        opacity=0.7
+    ), row=1, col=1)
+    fig.add_trace(go.Histogram(
+        x=data['data_1'],
+        nbinsx=300,
+        name='Data 1',
+        marker_color='red',
+        opacity=0.7
+    ), row=1, col=2)
 
-    # fig.update_layout(
-    #     title_text='Comparison of Data 0 and Data 1 Distribution',
-    #     title_x=0.5,
-    #     title_font=dict(size=20, family='Arial, sans-serif'),
-    #     template='plotly_white',
-    #     font=dict(size=14),
-    #     legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-    #     margin=dict(t=80, b=40)
-    # )
+    fig.update_layout(
+        title_text='Comparison of Data 0 and Data 1 Distribution',
+        title_x=0.5,
+        title_font=dict(size=20, family='Arial, sans-serif'),
+        template='plotly_white',
+        font=dict(size=14),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        margin=dict(t=80, b=40)
+    )
 
-    # fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
-    # fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
-    # fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
-    # fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
+    fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
+    fig.update_xaxes(title_text='Value', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
+    fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=1)
+    fig.update_yaxes(title_text='Frequency', title_font=dict(size=14, family='Arial, sans-serif'), row=1, col=2)
 
-    # fig.show()
+    fig.show()
 
 def raw_data_time_series_plot(data):
     y_min = min(data['data_0'].min(), data['data_1'].min()) - 0.5
@@ -500,8 +547,11 @@ def monthly_raw_time_series_plot(data):
         fig.show()
     data.set_index("datetime")
     
-def daily_average_plot(data):
+def daily_average_plot(df):
+    data = df.copy()
+    data = data.reset_index()
     data = prepare_data(data)
+    data = data.set_index("datetime")
     daily_averages = data.groupby(['year_month', 'date', 'day']).mean().reset_index()
 
     months = daily_averages['year_month'].unique()

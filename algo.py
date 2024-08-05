@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import json
+from sklearn.preprocessing import StandardScaler
 
 TIME_STEPS = 30
 BATCH_SIZE = 512
@@ -222,12 +223,14 @@ def calculate_anomalies(data_org, column_name, model, min_val, max_val, threshol
     
     # Calculate the starting index for updating the original DataFrame
     n = len(is_anomaly)
-    start_idx = -(n + 5)
-    if start_idx < 0:
-        start_idx = max(len(data_org) + start_idx, 0)
+    # start_idx = -(n + 5)
+    # if start_idx < 0:
+    #     start_idx = max(len(data_org) + start_idx, 0)
     
     # Get the rows to update
-    rows_to_update = data_org.index[start_idx:start_idx + n]
+    # rows_to_update = data_org.index[start_idx:start_idx + n]
+    rows_to_update = data_org.index[-n-15: -15]
+    print(len(data_org)-n)
     
     # Update the DataFrame with anomaly information
     data_org.loc[rows_to_update, anomaly_column] = is_anomaly
@@ -289,22 +292,64 @@ def remove_anomaly_and_fill(data):
     return data
 
 def univariate_GMM_anomaly_detection(data):
-    gmm_0 = GaussianMixture(n_components=3)
-    gmm_0.fit(data[['data_0']])
+    scaler1 = StandardScaler()
+    scaler2 = StandardScaler()
+    X_scaled1 = scaler1.fit_transform(data[["data_0"]])
+    X_scaled2 = scaler2.fit_transform(data[["data_1"]])
 
-    gmm_1 = GaussianMixture(n_components=3)
-    gmm_1.fit(data[['data_1']])
+    # Determine the optimal number of components using BIC
+    n_components_range = range(1, 10)
+    bics = []
+    for n_components in n_components_range:
+        gmm = GaussianMixture(n_components=n_components, random_state=42)
+        gmm.fit(X_scaled1)
+        bics.append(gmm.bic(X_scaled1))
+
+    optimal_n_components = n_components_range[np.argmin(bics)]
+    print(f"Optimal number of components: {optimal_n_components}")
+
+    gmm_0 = GaussianMixture(n_components=optimal_n_components)
+    gmm_0.fit(X_scaled1)
+
+    n_components_range = range(1, 10)
+    bics = []
+    for n_components in n_components_range:
+        gmm = GaussianMixture(n_components=n_components, random_state=42)
+        gmm.fit(X_scaled2)
+        bics.append(gmm.bic(X_scaled2))
+
+    optimal_n_components = n_components_range[np.argmin(bics)]
+    print(f"Optimal number of components: {optimal_n_components}")
+
+    gmm_1 = GaussianMixture(n_components=optimal_n_components)
+    gmm_1.fit(X_scaled2)
 
     # Anomaly detection
-    data['is_anomaly_0'] = gmm_0.score_samples(data[['data_0']])
-    data['is_anomaly_1'] = gmm_1.score_samples(data[['data_1']])
+    data['anomaly_0'] = gmm_0.score_samples(X_scaled1)
+    data['anomaly_1'] = gmm_1.score_samples(X_scaled2)
 
     # Determine a threshold for anomalies (for example, lower 1% of scores)
-    threshold_0 = np.percentile(data['is_anomaly_0'], 0.55)
-    threshold_1 = np.percentile(data['is_anomaly_1'], 0.55)
+    threshold_0 = np.percentile(data['anomaly_0'], 0.6)
+    threshold_1 = np.percentile(data['anomaly_1'], 0.5)
 
-    data['is_anomaly_0'] = data['is_anomaly_0'] < threshold_0
-    data['is_anomaly_1'] = data['is_anomaly_1'] < threshold_1
+    data['is_anomaly_0'] = data['anomaly_0'] < threshold_0
+    data['is_anomaly_1'] = data['anomaly_1'] < threshold_1
+    # gmm_0 = GaussianMixture(n_components=3)
+    # gmm_0.fit(data[['data_0']])
+
+    # gmm_1 = GaussianMixture(n_components=3)
+    # gmm_1.fit(data[['data_1']])
+
+    # # Anomaly detection
+    # data['is_anomaly_0'] = gmm_0.score_samples(data[['data_0']])
+    # data['is_anomaly_1'] = gmm_1.score_samples(data[['data_1']])
+
+    # # Determine a threshold for anomalies (for example, lower 1% of scores)
+    # threshold_0 = np.percentile(data['is_anomaly_0'], 0.55)
+    # threshold_1 = np.percentile(data['is_anomaly_1'], 0.55)
+
+    # data['is_anomaly_0'] = data['is_anomaly_0'] < threshold_0
+    # data['is_anomaly_1'] = data['is_anomaly_1'] < threshold_1
     return data
 
 def multivariate_GMM_anomaly_detection(data):

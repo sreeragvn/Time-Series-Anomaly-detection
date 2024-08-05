@@ -1,0 +1,3 @@
+## Task details
+
+Attached you find a time series of two-dimensional temperature data from the EDEN ISS greenhouse. They are placed in the same room at different locations. We know that there are different types of anomalies which may also appear more than once. Also some anomalies appear in both variables at the same time, some of them only in one variable. Try to find them with algorithms of your choice. Prepare a max. 15min presentation of your results. It should include the choice of your algorithms, problems you have noticed and your approaches to solve those, evaluation metrics, visualizations, etc. 

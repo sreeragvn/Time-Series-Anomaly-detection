@@ -33,6 +33,17 @@ def multivariate_anomaly_plot(data, diff=False):
         fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
                                 mode='markers', name='Anomaly data_1', 
                                 marker=dict(color='blue', size=10)), row=2, col=1)
+        
+        # # Add vertical lines for anomalies in data_0
+        # anomaly_indices_0 = monthly_data[monthly_data['data_0_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_0:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(255, 0, 0, 0.5)', width=1, dash='dot'), row=1, col=1)
+
+        # # Add vertical lines for anomalies in data_1
+        # anomaly_indices_1 = monthly_data[monthly_data['data_1_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_1:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(0, 0, 255, 0.5)', width=1, dash='dot'), row=2, col=1)
+
 
         fig.update_layout(title_text=f"Data for {month}")
         plots.append(fig)
@@ -75,6 +86,17 @@ def univariate_anomaly_plot(data, diff=False):
         fig.add_trace(go.Scatter(x=anomaly_indices_1, y=monthly_data.loc[anomaly_indices_1, 'data_1'], 
                                 mode='markers', name='Anomaly data_1', 
                                 marker=dict(color='blue', size=10)), row=2, col=1)
+        
+        # # Add vertical lines for anomalies in data_0
+        # anomaly_indices_0 = monthly_data[monthly_data['data_0_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_0:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(255, 0, 0, 0.5)', width=1, dash='dot'), row=1, col=1)
+
+        # # Add vertical lines for anomalies in data_1
+        # anomaly_indices_1 = monthly_data[monthly_data['data_1_anomaly'] == 1].index
+        # for anomaly_index in anomaly_indices_1:
+        #     fig.add_vline(x=anomaly_index, line=dict(color='rgba(0, 0, 255, 0.5)', width=1, dash='dot'), row=2, col=1)
+
 
         fig.update_layout(title_text=f"Data for {month}")
         plots.append(fig)
